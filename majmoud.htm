@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة درس الاستفهام التعليمية</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --error-color: #e74c3c;
+            --bg-color: #ecf0f1;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #game-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        #timer-fill {
+            height: 100%;
+            background: var(--secondary-color);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .question {
+            font-size: 1.4rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .options {
+            display: grid;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px;
+            font-size: 1.1rem;
+            border: 2px solid var(--secondary-color);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        .correct { background: var(--success-color) !important; color: white; }
+        .wrong { background: var(--error-color) !important; color: white; }
+
+        #result-screen { display: none; }
+        .hidden { display: none; }
+
+        #score-text { font-size: 2rem; color: var(--success-color); margin: 1rem 0; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="start-screen">
+        <h1>لعبة الاستفهام البلاغية</h1>
+        <p>اختبر معلوماتك في أدوات الاستفهام وأغراضها البلاغية</p>
+        <button onclick="startGame()">ابدأ اللعبة الآن</button>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+        <div class="timer-bar"><div id="timer-fill"></div></div>
+        <div id="question-number"></div>
+        <div class="question" id="question-text"></div>
+        <div class="options" id="options-container"></div>
+        <div id="feedback" style="margin-top: 15px; font-weight: bold;"></div>
+    </div>
+
+    <div id="result-screen">
+        <h1>انتهت اللعبة!</h1>
+        <div id="score-text"></div>
+        <p id="feedback-final"></p>
+        <button onclick="location.reload()">إعادة المحاولة</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        // 10 اختيار من متعدد
+        { q: "ما هو تعريف الاستفهام في البلاغة؟", options: ["طلب القيام بفعل", "طلب العلم بشيء مجهول", "النهي عن فعل"], correct: 1, type: "mcq" },
+        { q: "أي من الأدوات التالية تعتبر 'حرف' استفهام؟", options: ["من", "متى", "هل"], correct: 2, type: "mcq" },
+        { q: "تستخدم الأداة 'من' لطلب تعيين:", options: ["الزمان", "العقلاء", "المكان"], correct: 1, type: "mcq" },
+        { q: "الاستفهام في قوله تعالى 'ألم نشرح لك صدرك' غرضه:", options: ["النفي", "التقرير", "التعجب"], correct: 1, type: "mcq" },
+        { q: "الأداة 'كم' يطلب بها تعيين:", options: ["الحال", "العدد", "الزمان"], correct: 1, type: "mcq" },
+        { q: "ما نوع الإنشاء في جملة 'هل تحب المدرسة؟'؟", options: ["طلبي", "غير طلبي", "خبري"], correct: 0, type: "mcq" },
+        { q: "الأداة التي تستخدم لتعيين الزمان في المستقبل خاصة هي:", options: ["متى", "أيان", "أين"], correct: 1, type: "mcq" },
+        { q: "عندما يطلب بالهمزة تعيين أحد الطرفين تسمى همزة:", options: ["تصديق", "تصور", "تسوية"], correct: 1, type: "mcq" },
+        { q: "الغرض البلاغي من 'أمعفر الليث الهزبر بسوطه' للمتنبي هو:", options: ["التعجب", "التمني", "الإنكار"], correct: 0, type: "mcq" },
+        { q: "تستخدم 'أين' لطلب تعيين:", options: ["الحال", "المكان", "غير العاقل"], correct: 1, type: "mcq" },
+        
+        // 10 صح وخطأ
+        { q: "هل تعتبر 'هل' من أسماء الاستفهام؟", options: ["صح", "خطأ"], correct: 1, type: "tf" },
+        { q: "الاستفهام قد يخرج عن معناه الحقيقي إلى معانٍ بلاغية تفهم من السياق.", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "تستخدم 'كيف' للسؤال عن الحال.", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "الإجابة عن استفهام 'هل' تكون دائماً بالتعيين.", options: ["صح", "خطأ"], correct: 1, type: "tf" },
+        { q: "الأداة 'ما' تستخدم لشرح الاسم أو حقيقة المسمى.", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "الهمزة وهل هما الحرفان الوحيدان في أدوات الاستفهام.", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "غرض الاستفهام في 'أأنت يتيم؟' بالملف هو الاستخبار الحقيقي.", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "'أنى' تأتي بمعانٍ عدة منها (كيف، أين، متى).", options: ["صح", "خطأ"], correct: 0, type: "tf" },
+        { q: "الاستفهام 'من ذا الذي يشفع عنده إلا بإذنه' غرضه التعظيم.", options: ["صح", "خطأ"], correct: 1, type: "tf" }, // غرضه النفي
+        { q: "أدوات الاستفهام (من، ما، متى) يطلب بها التصور فقط.", options: ["صح", "خطأ"], correct: 0, type: "tf" }
+    ];
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timer;
+    let timeLeft = 20;
+
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        showQuestion();
+    }
+
+    function showQuestion() {
+        if (currentQuestionIndex >= questions.length) {
+            return showResult();
+        }
+
+        const q = questions[currentQuestionIndex];
+        document.getElementById('question-number').innerText = `سؤال ${currentQuestionIndex + 1} من 20`;
+        document.getElementById('question-text').innerText = q.q;
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        document.getElementById('feedback').innerText = '';
+
+        q.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(index);
+            optionsContainer.appendChild(btn);
+        });
+
+        startTimer();
+    }
+
+    function startTimer() {
+        timeLeft = 20;
+        document.getElementById('timer-fill').style.width = '100%';
+        clearInterval(timer);
+        timer = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-fill').style.width = (timeLeft / 20 * 100) + '%';
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                checkAnswer(-1); // اعتباره إجابة خاطئة
+            }
+        }, 1000);
+    }
+
+    function checkAnswer(selectedIndex) {
+        clearInterval(timer);
+        const q = questions[currentQuestionIndex];
+        const buttons = document.getElementById('options-container').getElementsByTagName('button');
+        
+        if (selectedIndex === q.correct) {
+            score++;
+            if(selectedIndex !== -1) buttons[selectedIndex].classList.add('correct');
+            document.getElementById('feedback').innerText = "إجابة صحيحة! أحسنت.";
+            document.getElementById('feedback').style.color = "green";
+        } else {
+            if(selectedIndex !== -1) buttons[selectedIndex].classList.add('wrong');
+            buttons[q.correct].classList.add('correct');
+            document.getElementById('feedback').innerText = "إجابة خاطئة.";
+            document.getElementById('feedback').style.color = "red";
+        }
+
+        // تعطيل الأزرار بعد الإجابة
+        for (let btn of buttons) btn.disabled = true;
+
+        setTimeout(() => {
+            currentQuestionIndex++;
+            showQuestion();
+        }, 2000);
+    }
+
+    function showResult() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-text').innerText = `${score} / 20`;
+        
+        let msg = "";
+        if (score >= 18) msg = "مذهل! أنت خبير في البلاغة.";
+        else if (score >= 10) msg = "جيد جداً، يمكنك مراجعة الأدوات مرة أخرى.";
+        else msg = "تحتاج لمراجعة درس الاستفهام جيداً.";
+        document.getElementById('feedback-final').innerText = msg;
+    }
+</script>
+
+</body>
+</html>
